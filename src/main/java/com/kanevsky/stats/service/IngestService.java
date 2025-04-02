@@ -27,9 +27,6 @@ public class IngestService {
     @Qualifier("teamStatsManager")
     private IStatsManager teamStatsManager;
 
-    /**
-     * Process a single stats entry
-     */
     public boolean processStatsEntry(StatsEntryDto statsEntry) {
         try {
             Stats stats = statsMapper.toStats(statsEntry.getStats());
@@ -45,9 +42,6 @@ public class IngestService {
         }
     }
 
-    /**
-     * Process a batch of stats entries
-     */
     public int processBatchEntries(List<StatsEntryDto> entries) {
         if (entries == null || entries.isEmpty()) {
             return 0;

@@ -17,9 +17,6 @@ public class StatsRetrievalController {
     @Autowired
     private StatsService statsService;
 
-    /**
-     * Endpoint to retrieve a player's season statistics
-     */
     @GetMapping("/player/{playerName}")
     public ResponseEntity<PlayerStatsDto> getPlayerStats(@PathVariable String playerName) {
         PlayerStatsDto playerStatsDto = statsService.getPlayerStats(playerName);
@@ -31,9 +28,6 @@ public class StatsRetrievalController {
         return ResponseEntity.ok(playerStatsDto);
     }
 
-    /**
-     * Endpoint to retrieve a team's season statistics
-     */
     @GetMapping("/team/{teamName}")
     public ResponseEntity<TeamStatsDto> getTeamStats(@PathVariable String teamName) {
         TeamStatsDto teamStatsDto = statsService.getTeamStats(teamName);
