@@ -1,5 +1,6 @@
 package com.kanevsky.stats.dto;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -16,6 +17,7 @@ public class StatsEntryDto {
 
     @Valid
     @NotNull(message = "Stats cannot be null")
+    @JsonUnwrapped
     private GameStatsDto stats;
     
     @Data
