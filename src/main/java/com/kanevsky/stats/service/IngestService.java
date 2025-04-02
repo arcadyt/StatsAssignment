@@ -1,6 +1,5 @@
 package com.kanevsky.stats.service;
 
-import com.kanevsky.stats.IngestException;
 import com.kanevsky.stats.dto.StatsEntryDto;
 import com.kanevsky.stats.mappers.IStatsMapper;
 import com.kanevsky.stats.model.Stats;
