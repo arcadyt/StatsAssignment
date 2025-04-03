@@ -5,11 +5,15 @@ import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 public class StatsManager implements IStatsManager {
-    
+
     private final StatsRepo statsRepo;
-    
+
     @Override
     public boolean submit(Stats gameStats, String name) {
+        if (gameStats == null || name == null || name.trim().isEmpty()) {
+            return false;
+        }
+
         try {
             statsRepo.accept(name, gameStats);
             return true;
@@ -17,7 +21,7 @@ public class StatsManager implements IStatsManager {
             return false;
         }
     }
-    
+
     @Override
     public Stats getStats(String name) {
         return statsRepo.getStats(name);
