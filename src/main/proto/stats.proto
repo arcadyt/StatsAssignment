@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.kanevsky.stats.grpc";
+option java_outer_classname = "StatsProto";
+
+package stats;
+
+// The stats service definition
+service StatsService {
+  // Ingest player stats
+  rpc IngestStats (StatsBatchRequest) returns (IngestResponse) {}
+}
+
+// The request message containing the stats batch
+message StatsBatchRequest {
+  repeated StatsEntry entries = 1;
+}
+
+// Stats entry for a player in a game
+message StatsEntry {
+  string player_name = 1;
+  string team_name = 2;
+  GameStats stats = 3;
+}
+
+// Game statistics
+message GameStats {
+  int32 points = 1;
+  int32 rebounds = 2;
+  int32 assists = 3;
+  int32 steals = 4;
+  int32 blocks = 5;
+  int32 fouls = 6;
+  int32 turnovers = 7;
+  double minutes_played = 8;
+}
+
+// The response message
+message IngestResponse {
+  int32 success_count = 1;
+}
