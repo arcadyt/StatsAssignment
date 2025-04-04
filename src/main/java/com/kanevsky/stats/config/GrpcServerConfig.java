@@ -1,6 +1,7 @@
 package com.kanevsky.stats.config;
 
 import com.kanevsky.stats.grpc.StatsGrpcService;
+import com.kanevsky.stats.grpc.interceptors.ValidationInterceptor;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import lombok.extern.slf4j.Slf4j;
@@ -23,19 +24,22 @@ public class GrpcServerConfig {
     @Autowired
     private StatsGrpcService statsGrpcService;
 
+    @Autowired
+    private ValidationInterceptor validationInterceptor;
+
     private Server server;
 
     @Bean
     public Server grpcServer() throws IOException {
         server = ServerBuilder.forPort(grpcPort)
                 .addService(statsGrpcService)
+                .intercept(validationInterceptor)
                 .build();
 
         try {
             server.start();
             log.info("gRPC Server started on port {}", grpcPort);
 
-            // Start server in a separate thread
             Thread awaitThread = new Thread(() -> {
                 try {
                     server.awaitTermination();
