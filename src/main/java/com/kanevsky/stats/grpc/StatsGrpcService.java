@@ -1,14 +1,16 @@
 package com.kanevsky.stats.grpc;
 
+import build.buf.protovalidate.ValidationResult;
 import com.kanevsky.stats.dto.StatsEntryDto;
+import com.kanevsky.stats.grpc.validations.ProtoValidationService;
 import com.kanevsky.stats.service.IngestService;
-import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class StatsGrpcService extends StatsServiceGrpc.StatsServiceImplBase {
@@ -19,7 +21,6 @@ public class StatsGrpcService extends StatsServiceGrpc.StatsServiceImplBase {
     @Override
     public void ingestStats(StatsBatchRequest request, StreamObserver<IngestResponse> responseObserver) {
         try {
-            // Validation is handled by interceptor
             List<StatsEntryDto> entries = convertToEntryDtos(request);
             int successCount = ingestService.processBatchEntries(entries);
 
@@ -30,9 +31,18 @@ public class StatsGrpcService extends StatsServiceGrpc.StatsServiceImplBase {
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         } catch (Exception e) {
-            responseObserver.onError(Status.INTERNAL
-                    .withDescription("Error processing stats: " + e.getMessage())
-                    .asRuntimeException());
+            ProcessingError error = ProcessingError.newBuilder()
+                    .setFieldPath("")
+                    .setMessage("Error processing stats: " + e.getMessage())
+                    .build();
+
+            IngestResponse response = IngestResponse.newBuilder()
+                    .setSuccessCount(0)
+                    .addErrors(error)
+                    .build();
+
+            responseObserver.onNext(response);
+            responseObserver.onCompleted();
         }
     }
 

@@ -32,8 +32,8 @@ public class GrpcServerConfig {
     @Bean
     public Server grpcServer() throws IOException {
         server = ServerBuilder.forPort(grpcPort)
-                .addService(statsGrpcService)
                 .intercept(validationInterceptor)
+                .addService(statsGrpcService)
                 .build();
 
         try {

@@ -41,6 +41,7 @@ message IngestResponse {
 message ProcessingError {
   string field_path = 1;
   string message = 2;
+  ErrorCode code = 3;
 }
 
 enum ErrorCode {
