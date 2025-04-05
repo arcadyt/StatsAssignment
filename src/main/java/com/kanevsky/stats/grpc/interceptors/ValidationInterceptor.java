@@ -86,7 +86,6 @@ public class ValidationInterceptor implements ServerInterceptor {
     }
 
     private <ReqT, RespT> void handleUnexpectedException(ServerCall<ReqT, RespT> call, Exception e) {
-        log.error(UNEXPECTED_ERROR_LOG_MSG, e.getMessage());
         call.close(Status.INTERNAL.withDescription(INTERNAL_ERROR_MSG), new Metadata());
     }
 

@@ -4,18 +4,17 @@ import com.kanevsky.stats.dto.StatsEntryDto;
 import com.kanevsky.stats.mappers.IGrpcMapper;
 import com.kanevsky.stats.service.IngestService;
 import io.grpc.stub.StreamObserver;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@AllArgsConstructor
 public class StatsGrpcService extends StatsServiceGrpc.StatsServiceImplBase {
 
-    @Autowired
     private IngestService ingestService;
 
-    @Autowired
     private IGrpcMapper grpcMapper;
 
     @Override
