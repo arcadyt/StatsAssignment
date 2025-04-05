@@ -3,26 +3,25 @@ package com.kanevsky.stats.grpc.interceptors;
 import build.buf.protovalidate.ValidationResult;
 import build.buf.protovalidate.exceptions.ValidationException;
 import build.buf.validate.FieldPathElement;
-import com.kanevsky.stats.grpc.ErrorCode;
-import com.kanevsky.stats.grpc.IngestResponse;
-import com.kanevsky.stats.grpc.ProcessingError;
-import com.kanevsky.stats.grpc.StatsBatchRequest;
 import com.kanevsky.stats.grpc.validations.ProtoValidationService;
 import io.grpc.*;
-import jakarta.validation.ConstraintViolation;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Component
 public class ValidationInterceptor implements ServerInterceptor {
+
+    private static final String VALIDATION_ERRORS_KEY = "validation-errors";
+    private static final String VALIDATION_EXCEPTION_KEY = "validation-exception";
+    private static final String VALIDATION_FAILED_MSG = "Validation failed: {} error(s)";
+    private static final String VALIDATION_ERROR_LOG_MSG = "Validation error: {}";
+    private static final String UNEXPECTED_ERROR_LOG_MSG = "Unexpected error during validation: {}";
+    private static final String INTERNAL_ERROR_MSG = "Internal validation error";
+    private static final String VALIDATION_EXCEPTION_MSG = "Validation exception";
 
     private final ProtoValidationService validationService;
 
@@ -43,69 +42,65 @@ public class ValidationInterceptor implements ServerInterceptor {
             @Override
             public void onMessage(ReqT message) {
                 try {
-                    ValidationResult result = validationService.validate((com.google.protobuf.Message)message);
+                    ValidationResult result = validationService.validate((com.google.protobuf.Message) message);
 
                     if (!result.isSuccess()) {
-                        Metadata trailers = new Metadata();
-
-                        // Define metadata keys
-                        Metadata.Key<String> errorsKey = Metadata.Key.of(
-                                "validation-errors", Metadata.ASCII_STRING_MARSHALLER);
-
-                        StringBuilder errorsJson = new StringBuilder("[");
-                        boolean firstError = true;
-
-                        for (var v : result.getViolations()) {
-                            if (!firstError) {
-                                errorsJson.append(",");
-                            }
-                            firstError = false;
-
-                            // Get the field path using the tested approach
-                            String fieldPath = v.toProto().getField().getElementsList().stream()
-                                    .map(FieldPathElement::getFieldName)
-                                    .collect(Collectors.joining("."));
-
-                            // Get the error message using the tested approach
-                            String errorMessage = v.toProto().getMessage();
-
-                            // Build JSON-like error entry
-                            errorsJson.append("{")
-                                    .append("\"field\":\"").append(fieldPath).append("\",")
-                                    .append("\"message\":\"").append(errorMessage).append("\"")
-                                    .append("}");
-                        }
-
-                        errorsJson.append("]");
-
-                        // Add error information to metadata
-                        trailers.put(errorsKey, errorsJson.toString());
-
-                        log.debug("Validation failed: {}", errorsJson);
-
-                        // Close the call with INVALID_ARGUMENT status and error details in metadata
-                        call.close(Status.INVALID_ARGUMENT
-                                        .withDescription("Validation failed: " + result.getViolations().size() + " error(s)"),
-                                trailers);
+                        handleValidationFailure(call, result);
                         return;
                     }
 
-                    // Message is valid, proceed with normal processing
                     super.onMessage(message);
                 } catch (ValidationException e) {
-                    log.debug("Validation error: {}", e.getMessage());
-
-                    Metadata trailers = new Metadata();
-                    Metadata.Key<String> errorKey = Metadata.Key.of(
-                            "validation-exception", Metadata.ASCII_STRING_MARSHALLER);
-                    trailers.put(errorKey, e.getMessage());
-
-                    call.close(Status.INVALID_ARGUMENT.withDescription("Validation exception"), trailers);
+                    handleValidationException(call, e);
                 } catch (Exception e) {
-                    log.error("Unexpected error during validation: {}", e.getMessage());
-                    call.close(Status.INTERNAL.withDescription("Internal validation error"), new Metadata());
+                    handleUnexpectedException(call, e);
                 }
             }
         };
+    }
+
+    private <ReqT, RespT> void handleValidationFailure(ServerCall<ReqT, RespT> call, ValidationResult result) {
+        Metadata trailers = new Metadata();
+        Metadata.Key<String> errorsKey = Metadata.Key.of(
+                VALIDATION_ERRORS_KEY, Metadata.ASCII_STRING_MARSHALLER);
+
+        String errorsJson = formatViolationsAsJson(result);
+        trailers.put(errorsKey, errorsJson);
+
+        log.debug("Validation failed: {}", errorsJson);
+
+        call.close(Status.INVALID_ARGUMENT
+                        .withDescription(String.format(VALIDATION_FAILED_MSG, result.getViolations().size())),
+                trailers);
+    }
+
+    private <ReqT, RespT> void handleValidationException(ServerCall<ReqT, RespT> call, ValidationException e) {
+        log.debug(VALIDATION_ERROR_LOG_MSG, e.getMessage());
+
+        Metadata trailers = new Metadata();
+        Metadata.Key<String> errorKey = Metadata.Key.of(
+                VALIDATION_EXCEPTION_KEY, Metadata.ASCII_STRING_MARSHALLER);
+        trailers.put(errorKey, e.getMessage());
+
+        call.close(Status.INVALID_ARGUMENT.withDescription(VALIDATION_EXCEPTION_MSG), trailers);
+    }
+
+    private <ReqT, RespT> void handleUnexpectedException(ServerCall<ReqT, RespT> call, Exception e) {
+        log.error(UNEXPECTED_ERROR_LOG_MSG, e.getMessage());
+        call.close(Status.INTERNAL.withDescription(INTERNAL_ERROR_MSG), new Metadata());
+    }
+
+    private String formatViolationsAsJson(ValidationResult result) {
+        return "[" + result.getViolations().stream()
+                .map(violation -> {
+                    String fieldPath = violation.toProto().getField().getElementsList().stream()
+                            .map(FieldPathElement::getFieldName)
+                            .collect(Collectors.joining("."));
+
+                    String errorMessage = violation.toProto().getMessage();
+
+                    return String.format("{\"field\":\"%s\",\"message\":\"%s\"}", fieldPath, errorMessage);
+                })
+                .collect(Collectors.joining(",")) + "]";
     }
 }
