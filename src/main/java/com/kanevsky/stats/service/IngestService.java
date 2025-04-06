@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 @Service
-public class IngestService {
+public class IngestService implements IIngestService {
 
     @Autowired
     private IStatsMapper statsMapper;
@@ -27,6 +27,7 @@ public class IngestService {
     @Qualifier("teamStatsManager")
     private IStatsManager teamStatsManager;
 
+    @Override
     public boolean processStatsEntry(StatsEntryDto statsEntry) {
         try {
             Stats stats = statsMapper.toStats(statsEntry.getStats());
@@ -42,6 +43,7 @@ public class IngestService {
         }
     }
 
+    @Override
     public int processBatchEntries(List<StatsEntryDto> entries) {
         if (entries == null || entries.isEmpty()) {
             return 0;

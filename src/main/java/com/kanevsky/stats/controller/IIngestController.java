@@ -9,4 +9,3 @@ import org.springframework.web.bind.annotation.ResponseBody;
 public interface IIngestController {
    void ingest(StatsBatchRequestDto request);
 }
-
